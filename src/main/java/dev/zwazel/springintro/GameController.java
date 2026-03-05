@@ -1,4 +1,4 @@
 package dev.zwazel.springintro;
 
-public class ShipController {
+public class GameController { ;
 }
