@@ -22,13 +22,13 @@ public class Ship {
 
     //constructor
     public Ship(Position position, int health, int maxHealth, double width, double height, long shootCooldown) {
-        Position startPosition = new Position(0 ,0);
-        this.position = startPosition;
-        this.health = 100;
-        this.maxHealth = 150;;
-        this.width = 150;
-        this.height = 500;
-        this.shootCooldown = 50;
+
+        this.position = position;
+        this.health = health;
+        this.maxHealth = maxHealth;;
+        this.width = width;
+        this.height = height;
+        this.shootCooldown = shootCooldown;
     }
     public Position moveLeft() {
         if (-150 < position.getX()){

@@ -9,7 +9,7 @@ import lombok.Setter;
 public class Position {
     @Setter
     private Integer x;
-    @Getter
+
     @Setter
     private Integer y;
 
@@ -17,11 +17,5 @@ public class Position {
         this.x = 0;
         this.y = 0;
 
-    }
-    public Integer getX() {
-        return this.x;
-    }
-    public Integer getY() {
-        return this.y;
     }
 }

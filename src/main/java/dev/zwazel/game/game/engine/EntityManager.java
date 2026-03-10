@@ -3,9 +3,13 @@ package dev.zwazel.game.game.engine;
 import dev.zwazel.game.game.model.Bullet;
 import dev.zwazel.game.game.model.Meteorite;
 import dev.zwazel.game.game.model.Ship;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.List;
 
+@Getter
+@Setter
 public class EntityManager {
     private List<Ship> ships;
     private List<Bullet> bullets;
@@ -22,13 +26,4 @@ public class EntityManager {
         meteorites.add(meteorite);
     }
 
-    public List<Bullet> getBullets() {
-        return bullets;
-    }
-    public List<Meteorite> getMeteorites() {
-        return meteorites;
-    }
-    public List<Ship> getShips() {
-        return ships;
-    }
 }
