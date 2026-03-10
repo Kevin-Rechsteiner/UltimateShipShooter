@@ -3,26 +3,26 @@ package dev.zwazel.game.game.model;
 
 import lombok.Getter;
 
-public class Meteorite {
+public class Meteorite extends Entity {
 
-    private Position position;
+
     @Getter
-    private Integer size;
     private Integer speed;
     @Getter
     private Integer health;
     private Velocity velocity;
 
-    public Meteorite(Position position, Integer size, Integer speed, Integer health) {
-        this.position = position;
-        this.size = size;
+
+    public Meteorite(Position position, Integer width, Integer height, Integer speed, Integer health, Boolean isActive) {
+        super(position, width, height, isActive);
         this.speed = speed;
         this.health = health;
         this.velocity = new Velocity(speed, 0);
 
+
     }
     public void updatePosition() {
-        position.setX((int) (position.getX() + velocity.getVx()));
+        this.position.setX((int) (position.getX() + velocity.getVx()));
         position.setY((int) (position.getY() + velocity.getVy()));
     }
     public void takeDamage(int damage) {
@@ -35,4 +35,9 @@ public class Meteorite {
     }
 
 
+    @Override
+    public void update(double deltaTime) {
+        this.position.setX((velocity.getVx() + deltaTime))
+
+    }
 }

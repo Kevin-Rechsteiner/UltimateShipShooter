@@ -8,4 +8,6 @@ public class CollisionEvent {
     private Entity firstEntity;
     private Entity secondEntity;
 
+
+
 }

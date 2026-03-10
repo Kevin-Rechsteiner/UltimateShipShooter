@@ -8,7 +8,7 @@ import lombok.Setter;
 @Getter
 @Setter
 
-public class Ship {
+public class Ship extends Entity {
     @Id
     private Long id;
     private Position position;
@@ -16,12 +16,13 @@ public class Ship {
     private int maxHealth;
     private double width;
     private double height;
-    private long lastShotTime;
-    private long shootCooldown;
+    private double lastShotTime;
+    private double shootCooldown;
 
 
-    //constructor
-    public Ship(Position position, int health, int maxHealth, double width, double height, long shootCooldown) {
+
+    public Ship(Position position, int health, int maxHealth, int width, int height, long shootCooldown, Boolean isActive) {
+        super(position, width, height, isActive);
 
         this.position = position;
         this.health = health;
@@ -63,4 +64,8 @@ public class Ship {
          return health > 0;
      }
 
+    @Override
+    public void update(double deltaTime) {
+        shootCooldown += deltaTime;
+    }
 }

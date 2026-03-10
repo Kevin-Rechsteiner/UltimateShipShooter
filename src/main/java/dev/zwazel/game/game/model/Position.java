@@ -18,4 +18,8 @@ public class Position {
         this.y = 0;
 
     }
+
+    public void setX(Integer x
+        ) {this.x = x;
+    }
 }
