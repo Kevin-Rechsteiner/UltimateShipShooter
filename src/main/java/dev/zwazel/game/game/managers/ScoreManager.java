@@ -3,7 +3,7 @@ package dev.zwazel.game.game.managers;
 import dev.zwazel.game.game.entities.Meteorite;
 
 public class ScoreManager {
-    private Integer currentScore;
+    private Integer currentScore = 0;
     private Integer meteoritesDestroyed;
 
 

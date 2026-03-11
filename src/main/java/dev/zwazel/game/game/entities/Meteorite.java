@@ -15,6 +15,7 @@ public class Meteorite extends Entity {
 
     private Integer health;
     private Velocity velocity;
+    @Getter
     private static Integer size;
 
     public Meteorite(Position position, Integer width, Integer height, Integer speed, Integer health, Boolean isActive, Integer size) {
@@ -41,16 +42,10 @@ public class Meteorite extends Entity {
         else {
             return true;
     }}
-    public static Integer getSize() {
-        return size;
-
-    }
 
     public Integer getHealth(
     ) {
         return health;
-
-
     }
 
     public void update(double deltaTime) {

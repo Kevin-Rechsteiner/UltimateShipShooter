@@ -11,9 +11,9 @@ import java.util.List;
 @Getter
 @Setter
 public class EntityManager {
-    private static List<Ship> ships;
-    private static List<Bullet> bullets;
-    private static List<Meteorite> meteorites;
+    //private static List<Ship> ships;
+    //private static List<Bullet> bullets;
+    //private static List<Meteorite> meteorites;
 
 
     public void addShip(Ship ship) {
