@@ -1,0 +1,455 @@
+I'll redesign the entire structure without velocity for the ship.
+
+Game Architecture Overview (No Velocity)
+Code
+src/
+├── main/
+│   └── java/
+│       └── com/
+│           └── meteorite_shooter/
+│               ├── Game.java                 # Main game loop and coordinator
+│               ├── GameState.java            # Game state management
+│               ├── GameConfig.java           # Configuration constants
+│               │
+│               ├── entities/
+│               │   ├── Entity.java           # Abstract base class
+│               │   ├── Ship.java             # Player-controlled ship (no velocity)
+│               │   ├── Meteorite.java        # Enemy meteorites (has velocity/direction)
+│               │   └── Projectile.java       # Bullets (has velocity/direction)
+│               │
+│               ├── managers/
+│               │   ├── EntityManager.java    # Manages all game entities
+│               │   ├── CollisionManager.java # Collision detection & handling
+│               │   ├── InputManager.java     # Input handling
+│               │   └── ScoreManager.java     # Score & game statistics
+│               │
+│               ├── mechanics/
+│               │   ├── PhysicsEngine.java    # Movement for meteorites and projectiles
+│               │   ├── DamageSystem.java     # Health/damage logic
+│               │   └── WeaponSystem.java     # Shooting mechanics
+│               │
+│               ├── spawning/
+│               │   ├── SpawnManager.java     # Controls entity spawning
+│               │   └── WaveController.java   # Wave/difficulty progression
+│               │
+│               └── util/
+│                   ├── Position.java         # 2D position (x, y)
+│                   ├── Velocity.java         # 2D velocity for projectiles/meteorites
+│                   └── GameConstants.java    # Game-wide constants
+Detailed Class Descriptions (No Velocity)
+Core Utility Classes (util/ package)
+Position.java
+Purpose: Simple x, y coordinate tracking
+
+Fields you need:
+
+X coordinate (double)
+Y coordinate (double)
+Methods you need:
+
+Constructor taking x and y
+Copy constructor
+Getter methods for x and y
+Setter methods for x and y
+Set both method (x and y together)
+Distance calculation method (distance from this position to another position)
+ToString method (for debugging)
+Velocity.java
+Purpose: Speed and direction for projectiles and meteorites (NOT for ship)
+
+Fields you need:
+
+X direction velocity (double) - how many pixels to move horizontally per frame
+Y direction velocity (double) - how many pixels to move vertically per frame
+Methods you need:
+
+Constructor taking x and y velocity
+Getter methods for x velocity and y velocity
+Setter methods for x velocity and y velocity
+Multiply method (scale velocity by number for difficulty)
+ToString method (for debugging)
+GameConstants.java
+Purpose: All configuration numbers in one place
+
+Constants you need:
+
+Screen dimensions (width 800, height 600)
+Ship starting position (center-bottom)
+Ship dimensions (width, height)
+Ship movement amount (5 pixels when key pressed)
+Ship health
+Ship damage taken from meteorite (10 HP)
+Projectile dimensions
+Projectile upward speed (pixels per frame, like 8 pixels/frame)
+Projectile damage (1 HP)
+Projectile max lifetime (5000 milliseconds)
+Fire rate (milliseconds between shots, like 100ms)
+Meteorite health by size (small=1, medium=2, large=3)
+Meteorite point values (small=10, medium=25, large=50)
+Meteorite spawn interval (milliseconds between spawns, like 1000ms)
+Meteorite downward speed (pixels per frame, like 3 pixels/frame)
+Difficulty scaling multipliers per wave
+Wave goal (meteorites to destroy before advancing)
+Entity Classes (entities/ package)
+Entity.java (Abstract Base Class)
+Purpose: Common foundation for all game objects
+
+Fields you need:
+
+Position object (contains x and y)
+Width (for collision box)
+Height (for collision box)
+Active status flag (is it still in game?)
+Unique identifier number
+Methods you need:
+
+Abstract update method (each entity type updates differently)
+Abstract method to get collision boundaries (rectangle representing collision area)
+Abstract toString method (for debugging)
+Getter method for position
+Getter methods for width and height
+Getter method for active status
+Deactivate method (mark as dead)
+Check if off-screen method (with screen width and height parameters)
+Ship.java (extends Entity) - NO VELOCITY
+Purpose: Player-controlled spaceship (moves directly left/right when keys pressed)
+
+Fields you need:
+
+Health points (current, starts at 100)
+Maximum health value
+Screen width (boundary so can't move past edges)
+Movement amount (how many pixels to move per key press, like 5)
+Ship width and height (for collision)
+Methods you need:
+
+Constructor that places ship at center-bottom of screen
+Move left method
+Check if position.x minus movement amount is >= 0 (not past left edge)
+If yes: subtract movement amount from position.x
+If no: don't move
+Move right method
+Check if position.x plus movement amount plus ship width is <= screen width (not past right edge)
+If yes: add movement amount to position.x
+If no: don't move
+Take damage method (subtract from health, clamp to minimum 0)
+Is alive method (check if health > 0)
+Get health method
+Get max health method
+Can shoot method (check if enough time passed since last shot)
+Reset shoot cooldown method (set timer back to zero)
+Update method
+Increment the cooldown timer
+This is the ONLY update the ship does - no position changes here
+Meteorite.java (extends Entity) - HAS VELOCITY
+Purpose: Enemy obstacles that fall downward automatically
+
+Fields you need:
+
+Health points (varies by size: 1, 2, or 3)
+Maximum health
+Size enum (SMALL, MEDIUM, LARGE)
+Velocity object (for downward movement)
+Methods you need:
+
+Constructor that places meteorite at top with random horizontal position and size
+Set position (random x from 0 to screen width, y = 0)
+Set size (randomly choose small, medium, or large)
+Set health based on size
+Set velocity (0 for x direction, constant downward speed for y direction)
+Take damage method (subtract from health, clamp to 0)
+Is destroyed method (health <= 0)
+Get size method
+Get health method
+Get point value method (returns 10, 25, or 50 based on size)
+Update method
+Add velocity.y to position.y (move downward by constant amount each frame)
+Is off-screen method (check if position.y > screen height)
+Projectile.java (extends Entity) - HAS VELOCITY
+Purpose: Bullets that shoot upward automatically
+
+Fields you need:
+
+Damage amount (typically 1)
+Velocity object (for upward movement)
+Time alive tracker (milliseconds)
+Maximum lifetime (5000 milliseconds before auto-removal)
+Methods you need:
+
+Constructor that takes ship's current position and creates bullet above it
+Set position (use ship's x position, ship's y position minus some amount)
+Set velocity (0 for x direction, negative speed for y direction going upward)
+Set time alive to 0
+Get damage method
+Is expired method (check if time alive > max lifetime)
+Is off-screen method (check if position.y < 0)
+Update method
+Add velocity.y to position.y (move upward by constant amount each frame)
+Add frame time to alive tracker
+Manager Classes (managers/ package)
+EntityManager.java
+Purpose: Central registry holding all active entities
+
+Fields you need:
+
+List of all active ships (usually just 1)
+List of all active meteorites
+List of all active projectiles
+Counter for unique entity IDs
+Methods you need:
+
+Add ship method
+Add meteorite method
+Add projectile method
+Get ships method
+Get meteorites method
+Get projectiles method
+Update all entities method
+Call update on each ship (this just increments cooldown timer)
+Call update on each meteorite (this moves them downward)
+Call update on each projectile (this moves them upward and increments lifetime)
+Remove dead entities method
+Remove meteorites if health <= 0 OR position.y > screen height
+Remove projectiles if lifetime > max lifetime OR position.y < 0
+Remove ships if health <= 0
+Individual remove methods for each entity type
+Get total entity count method (for debugging)
+Reset method (clear everything for new game)
+CollisionManager.java
+Purpose: Detects collisions and reports them
+
+Fields you need:
+
+Reference to entity manager (to access all entities)
+List to store collision events that occurred this frame
+Methods you need:
+
+Check collisions method (runs each frame)
+Check projectiles vs meteorites (do any projectile and meteorite collision boxes overlap?)
+Check meteorites vs ship (do any meteorite and ship collision boxes overlap?)
+Store all collisions in collision events list
+Private projectile-meteorite collision check method
+For each projectile: for each meteorite: test if boxes overlap
+If overlap found: create collision event
+Private meteorite-ship collision check method
+For each meteorite: test if overlaps with ship
+If overlap found: create collision event
+Private method to test if two collision boxes overlap (rectangle intersection)
+Use AABB (Axis-Aligned Bounding Box): two rectangles overlap if they don't miss each other on any side
+Get collision events method (return list of events)
+InputManager.java
+Purpose: Reads player keyboard input and moves ship immediately
+
+Fields you need:
+
+Reference to the ship
+Set of currently pressed keys (tracks what keys are being held)
+Methods you need:
+
+On key pressed method (called when key goes down)
+Add the key to the pressed keys set
+On key released method (called when key goes up)
+Remove the key from the pressed keys set
+Process input method (called each frame)
+Check if LEFT key is in pressed keys set
+If yes: call ship.moveLeft() (moves ship immediately)
+Check if RIGHT key is in pressed keys set
+If yes: call ship.moveRight() (moves ship immediately)
+Is key pressed method (check if specific key currently held)
+Reset method (clear all pressed keys)
+ScoreManager.java
+Purpose: Tracks game statistics
+
+Fields you need:
+
+Current score
+Total meteorites destroyed
+Current wave number
+Game start timestamp
+Total projectiles fired
+Successful hits count
+Methods you need:
+
+Add score method (add points to current score)
+On meteorite destroyed method (increment count, add points based on size)
+On projectile fired method (increment fire count)
+On hit method (increment hit count for accuracy)
+Set wave number method
+Get score method
+Get wave number method
+Get total meteorites destroyed method
+Get accuracy method (calculate hit percentage)
+Get game duration method (milliseconds elapsed since start)
+Reset method (clear all stats for new game)
+CollisionEvent.java (Helper Class)
+Purpose: Represents a single collision that happened
+
+Fields you need:
+
+First entity in collision
+Second entity in collision
+Type of collision (projectile-meteorite or meteorite-ship)
+Methods you need:
+
+Constructor taking both entities and type
+Get first entity method
+Get second entity method
+Get collision type method
+Mechanics Classes (mechanics/ package)
+PhysicsEngine.java
+Purpose: Updates positions for entities that have velocity (meteorites and projectiles)
+
+Fields you need:
+
+Reference to entity manager
+Screen height (to help with boundary checking)
+Methods you need:
+
+Update method (runs each frame)
+For each meteorite: add its velocity to its position (moves it downward)
+For each projectile: add its velocity to its position (moves it upward)
+Note: Ship is NOT updated here because it has no velocity
+Private boundary check method
+Meteorites: allow them to fall off bottom (they get removed in EntityManager)
+Projectiles: allow them to go off top (they get removed in EntityManager)
+DamageSystem.java
+Purpose: Applies damage when collisions happen
+
+Fields you need:
+
+Reference to entity manager
+Reference to score manager (to notify when meteorites die)
+Methods you need:
+
+Handle collision method (takes collision event and applies appropriate damage)
+If projectile hits meteorite:
+Call meteorite.takeDamage(projectile damage)
+Check if meteorite is destroyed
+If yes: notify score manager and mark for removal
+If meteorite hits ship:
+Call ship.takeDamage(meteorite damage, like 10 HP)
+Check if ship is destroyed elsewhere
+Process all collisions method
+Iterate through all collision events from collision manager
+Call handle collision on each one
+WeaponSystem.java
+Purpose: Controls automatic shooting
+
+Fields you need:
+
+Reference to entity manager
+Reference to ship
+Fire rate (milliseconds between shots, like 100ms)
+Reference to score manager
+Methods you need:
+
+Update method (runs each frame)
+Check if ship.canShoot() returns true (enough time passed?)
+If yes: call fire()
+Private fire method
+Get ship's current position (call ship.getPosition())
+Create new projectile at that position
+Add projectile to entity manager
+Call ship.resetShootCooldown()
+Notify score manager that projectile was fired
+Set fire rate method (for difficulty scaling)
+Get fire rate method
+Spawning Classes (spawning/ package)
+SpawnManager.java
+Purpose: Creates new meteorites on a timer
+
+Fields you need:
+
+Reference to entity manager
+Screen width and height
+Time since last spawn tracker (milliseconds)
+Spawn interval (milliseconds between spawns, like 1000ms)
+Reference to wave controller
+Methods you need:
+
+Update method (runs each frame)
+Subtract frame time from spawn cooldown
+If cooldown <= 0:
+Call spawn meteorite
+Reset cooldown to spawn interval
+Private spawn meteorite method
+Generate random x position (0 to screen width)
+Randomly choose size (small, medium, or large)
+Create new meteorite at that position with that size
+Add to entity manager
+Set spawn rate method (change spawn interval for difficulty)
+Get active meteorite count method
+WaveController.java
+Purpose: Manages difficulty progression
+
+Fields you need:
+
+Current wave number
+Health multiplier (increases per wave)
+Spawn rate multiplier (increases per wave)
+Wave goal (meteorites to destroy per wave)
+Methods you need:
+
+Get current wave method
+Get health multiplier method
+Calculates based on current wave (e.g., 1.0 + (wave-1) * 0.1)
+Used to scale meteorite health
+Get spawn rate multiplier method
+Calculates based on current wave (e.g., 1.0 + (wave-1) * 0.15)
+Used to scale how fast meteorites spawn
+Advance wave method (increment wave number)
+Should advance wave check method
+Check if meteorites destroyed >= wave goal
+Return true if should advance
+Reset method (back to wave 1)
+Core Game Classes
+Game.java
+Purpose: Main coordinator and game loop
+
+Fields you need:
+
+GameState object
+EntityManager
+CollisionManager
+InputManager
+ScoreManager
+PhysicsEngine
+DamageSystem
+WeaponSystem
+SpawnManager
+WaveController
+Reference to the ship
+Last frame time (for delta time tracking)
+Running flag
+Methods you need:
+
+Constructor (initializes all managers)
+Initialize method
+Create ship at center-bottom
+Initialize all managers with their dependencies
+Reset all stats
+Run method (main game loop)
+Loop while game is running:
+Call update()
+Call checkGameEnd()
+Private update method (one frame)
+InputManager.processInput() - reads keyboard, moves ship left/right immediately
+PhysicsEngine.update() - moves meteorites and projectiles based on velocity
+WeaponSystem.update() - fires bullets automatically
+SpawnManager.update() - spawns meteorites automatically
+EntityManager.update() - updates all entities (ship cooldown, meteorite/projectile movement)
+CollisionManager.checkCollisions() - detects overlaps
+DamageSystem.processAllCollisions() - applies damage from collisions
+EntityManager.removeDeadEntities() - clean up dead things
+ScoreManager.update() - track stats
+UpdateDifficulty() - check if wave should advance
+Private update difficulty method
+Check if enough meteorites destroyed
+If yes: advance wave
+Apply new difficulty multipliers to weapon and spawn systems
+Private check game end method
+If ship is not alive: end game
+End game method (stop loop, print final stats)
+Reset game method (clear everything, call initialize)
+Get game state method
+Get score manager method

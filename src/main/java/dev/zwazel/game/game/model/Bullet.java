@@ -1,6 +1,6 @@
 package dev.zwazel.game.game.model;
 
-public class Bullet {
+public class Bullet extends Entity {
     private Integer damage;
 
     private Velocity velocity;
@@ -8,8 +8,8 @@ public class Bullet {
     private Double maxLifetime;
     private Position position;
 
-    public Bullet(Position startPosition, Velocity velocity, Double timeAlive) {
-        position = startPosition;
+    public Bullet(Position startPosition, Velocity velocity, Double timeAlive, Long id, Integer width, Integer height, Boolean isActive, Double maxLifetime) {
+        super(startPosition, width, height, isActive);
         this.velocity = velocity;
         this.timeAlive = timeAlive;
 

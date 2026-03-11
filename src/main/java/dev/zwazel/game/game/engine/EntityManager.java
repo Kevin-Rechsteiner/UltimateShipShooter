@@ -29,7 +29,26 @@ public class EntityManager {
         if (meteorite.isAlive() == false) {
         removeMeteorite(meteorite);
     }}
+    public Ship getShip(int id) {
+        for (Ship ship : ships) {
+            if (ship.getId() == id) {
+                return ship;
+            }
+        }
+        return null;
+    }
 
+    public List<Meteorite> getMeteorites() {
+        return meteorites;
+    }
+
+    public List<Bullet> getBullets() {
+        return bullets;
+    }
+
+    public List<Ship> getShips() {
+        return ships;
+    }
     public static void removeMeteorite(Meteorite meteorite) {
             meteorites.remove(meteorite);
 

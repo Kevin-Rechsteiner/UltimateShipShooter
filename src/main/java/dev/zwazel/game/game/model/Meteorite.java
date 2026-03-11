@@ -13,13 +13,14 @@ public class Meteorite extends Entity {
 
     private Integer health;
     private Velocity velocity;
+    private static Integer size;
 
-
-    public Meteorite(Position position, Integer width, Integer height, Integer speed, Integer health, Boolean isActive) {
+    public Meteorite(Position position, Integer width, Integer height, Integer speed, Integer health, Boolean isActive, Integer size) {
         super(position, width, height, isActive);
         this.speed = speed;
         this.health = health;
         this.velocity = new Velocity(speed, 0);
+        this.size = size;
 
 
     }
@@ -38,6 +39,10 @@ public class Meteorite extends Entity {
         else {
             return true;
     }}
+    public static Integer getSize() {
+        return size;
+
+    }
 
     public Integer getHealth(
     ) {

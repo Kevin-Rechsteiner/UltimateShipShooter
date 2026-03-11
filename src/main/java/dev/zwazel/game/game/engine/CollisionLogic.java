@@ -16,7 +16,7 @@ public class CollisionLogic {
         List<Meteorite> meteorites = entityManager.getMeteorites();
         for (Ship ship : ships) {
             for (Meteorite meteorite : meteorites) {
-                if (CollisionEvent.checkCollision(ship, meteorite) == true);
+                if (CollisionEvent.checkCollision(ship, meteorite))
                 {
                     EntityManager.removeMeteorite(meteorite);
 
