@@ -1,6 +1,7 @@
-package dev.zwazel.game.game.managers;
+package dev.zwazel.game.game.mechanics;
 
 import dev.zwazel.game.game.entities.Ship;
+import dev.zwazel.game.game.managers.EntityManager;
 
 public class WeaponSystem {
     private EntityManager entityManager;

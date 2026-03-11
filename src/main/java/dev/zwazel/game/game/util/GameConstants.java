@@ -17,5 +17,6 @@ public class GameConstants {
     public static final Integer meteoriteSmallHealth = 1;
     public static final Integer meteoriteMediumHealth = 3;
     public static final Integer meteoriteLargeHealth = 5;
+    public static final Integer meteoriteSpeed = 20;
 
 }

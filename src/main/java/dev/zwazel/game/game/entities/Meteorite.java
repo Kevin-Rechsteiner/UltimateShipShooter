@@ -15,7 +15,7 @@ public class Meteorite extends Entity {
 
     private Integer health;
     private Velocity velocity;
-    private static Integer size;
+    private Integer size;
 
     public Meteorite(Position position, Integer width, Integer height, Integer speed, Integer health, Boolean isActive, Integer size) {
         super(position, width, height, isActive);
@@ -26,10 +26,8 @@ public class Meteorite extends Entity {
 
 
     }
-    public void updatePosition() {
-        this.position.setX((int) (position.getX() + velocity.getVx()));
-        position.setY((int) (position.getY() + velocity.getVy()));
-    }
+
+
     public void takeDamage(int damage) {
         health -= damage;
     }
@@ -41,20 +39,9 @@ public class Meteorite extends Entity {
         else {
             return true;
     }}
-    public static Integer getSize() {
-        return size;
-
-    }
-
-    public Integer getHealth(
-    ) {
-        return health;
-
-
-    }
 
     public void update(double deltaTime) {
         position.setX((int) (position.getX() + velocity.getVx() * deltaTime));
-
+        position.setY((int) (position.getY() + velocity.getVy() * deltaTime));
     }
 }
