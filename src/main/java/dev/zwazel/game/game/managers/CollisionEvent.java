@@ -1,8 +1,6 @@
-package dev.zwazel.game.game.engine;
+package dev.zwazel.game.game.managers;
 
-import dev.zwazel.game.game.model.Entity;
-import dev.zwazel.game.game.model.Meteorite;
-import dev.zwazel.game.game.model.Ship;
+import dev.zwazel.game.game.entities.Entity;
 
 import java.awt.*;
 

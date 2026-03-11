@@ -76,7 +76,7 @@ public class SecurityConfiguration {
      * @see AuthenticationController - Login/register endpoints that use this configuration
      */
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) {
         // STEP 1: Disable CSRF protection (not needed for stateless JWT-based REST APIs)
         http.csrf(AbstractHttpConfigurer::disable)
                 // STEP 2: Configure exception handlers for authentication/authorization failures
@@ -89,7 +89,7 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(request ->
                         request
                                 // Rule 1: Public endpoints (no authentication required)
-                                .requestMatchers("/error", "/api/v1/auth/**").permitAll()
+                                .requestMatchers("/", "/index.html", "/favicon.ico", "/ws", "/error", "/api/v1/auth/**").permitAll()
                                 // Rule 2: Admin-only resource creation
                                 .requestMatchers(HttpMethod.POST, "/api/v1/resource").hasRole("ADMIN")
                                 // Rule 3: Catch-all (all other endpoints require authentication)

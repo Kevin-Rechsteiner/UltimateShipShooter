@@ -1,6 +1,4 @@
-package dev.zwazel.game.game.engine;
-
-import dev.zwazel.game.game.model.Position;
+package dev.zwazel.game.game.util;
 
 public class GameConstants {
     public static final Integer width = 800; // map width

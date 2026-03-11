@@ -1,4 +1,4 @@
-package dev.zwazel.game.game.model;
+package dev.zwazel.game.game.util;
 
 
 import lombok.Getter;

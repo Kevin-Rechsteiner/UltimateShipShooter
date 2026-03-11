@@ -1,7 +1,7 @@
-package dev.zwazel.game.game.model;
+package dev.zwazel.game.game.entities;
 
 
-import jakarta.persistence.Id;
+import dev.zwazel.game.game.util.Position;
 import lombok.Getter;
 import lombok.Setter;
 

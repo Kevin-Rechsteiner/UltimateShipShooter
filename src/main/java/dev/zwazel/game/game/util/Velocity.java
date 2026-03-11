@@ -1,4 +1,4 @@
-package dev.zwazel.game.game.model;
+package dev.zwazel.game.game.util;
 
 public class Velocity {
     private Integer x;

@@ -1,6 +1,8 @@
-package dev.zwazel.game.game.model;
+package dev.zwazel.game.game.entities;
 
 
+import dev.zwazel.game.game.util.Position;
+import dev.zwazel.game.game.util.Velocity;
 import lombok.Getter;
 import lombok.Setter;
 @Getter

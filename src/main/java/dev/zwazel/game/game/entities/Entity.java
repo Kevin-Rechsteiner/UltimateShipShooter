@@ -1,5 +1,6 @@
-package dev.zwazel.game.game.model;
+package dev.zwazel.game.game.entities;
 
+import dev.zwazel.game.game.util.Position;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import lombok.Getter;

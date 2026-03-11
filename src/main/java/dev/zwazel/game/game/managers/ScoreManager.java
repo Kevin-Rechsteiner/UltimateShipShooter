@@ -1,6 +1,6 @@
-package dev.zwazel.game.game.engine;
+package dev.zwazel.game.game.managers;
 
-import dev.zwazel.game.game.model.Meteorite;
+import dev.zwazel.game.game.entities.Meteorite;
 
 public class ScoreManager {
     private Integer currentScore;

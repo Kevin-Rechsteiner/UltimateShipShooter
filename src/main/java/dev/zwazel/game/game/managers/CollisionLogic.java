@@ -1,8 +1,7 @@
-package dev.zwazel.game.game.engine;
-import dev.zwazel.game.game.engine.EntityManager;
-import dev.zwazel.game.game.model.Meteorite;
-import dev.zwazel.game.game.model.Ship;
-import dev.zwazel.game.game.engine.CollisionEvent;
+package dev.zwazel.game.game.managers;
+import dev.zwazel.game.game.entities.Meteorite;
+import dev.zwazel.game.game.entities.Ship;
+
 import java.util.List;
 
 public class CollisionLogic {

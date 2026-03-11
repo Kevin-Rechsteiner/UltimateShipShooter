@@ -1,4 +1,7 @@
-package dev.zwazel.game.game.model;
+package dev.zwazel.game.game.entities;
+
+import dev.zwazel.game.game.util.Position;
+import dev.zwazel.game.game.util.Velocity;
 
 public class Bullet extends Entity {
     private Integer damage;

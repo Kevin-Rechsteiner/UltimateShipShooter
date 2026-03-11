@@ -1,8 +1,8 @@
-package dev.zwazel.game.game.engine;
+package dev.zwazel.game.game.managers;
 
-import dev.zwazel.game.game.model.Bullet;
-import dev.zwazel.game.game.model.Meteorite;
-import dev.zwazel.game.game.model.Ship;
+import dev.zwazel.game.game.entities.Bullet;
+import dev.zwazel.game.game.entities.Meteorite;
+import dev.zwazel.game.game.entities.Ship;
 import lombok.Getter;
 import lombok.Setter;
 
