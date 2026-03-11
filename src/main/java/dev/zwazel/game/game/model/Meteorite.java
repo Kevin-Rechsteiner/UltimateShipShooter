@@ -2,13 +2,15 @@ package dev.zwazel.game.game.model;
 
 
 import lombok.Getter;
-
+import lombok.Setter;
+@Getter
+@Setter
 public class Meteorite extends Entity {
 
 
-    @Getter
+
     private Integer speed;
-    @Getter
+
     private Integer health;
     private Velocity velocity;
 
@@ -28,16 +30,24 @@ public class Meteorite extends Entity {
     public void takeDamage(int damage) {
         health -= damage;
     }
-    public void checkOnScreen(Position position) {
-        if (position.getX() < -150 || position.getX() > 150) {
-            // Remove meteorite from game
+
+    public Boolean isAlive() {
+        if (health <= 0) {
+            return false;
         }
+        else {
+            return true;
+    }}
+
+    public Integer getHealth(
+    ) {
+        return health;
+
+
     }
 
-
-    @Override
     public void update(double deltaTime) {
-        this.position.setX((velocity.getVx() + deltaTime))
+        position.setX((int) (position.getX() + velocity.getVx() * deltaTime));
 
     }
 }

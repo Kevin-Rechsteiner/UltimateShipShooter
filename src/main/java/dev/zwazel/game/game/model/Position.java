@@ -7,10 +7,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class Position {
-    @Setter
     private Integer x;
-
-    @Setter
     private Integer y;
 
     public Position(int x, int y) {
@@ -19,7 +16,5 @@ public class Position {
 
     }
 
-    public void setX(Integer x
-        ) {this.x = x;
-    }
+
 }

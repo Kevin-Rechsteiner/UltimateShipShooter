@@ -9,8 +9,7 @@ import lombok.Setter;
 @Setter
 
 public class Ship extends Entity {
-    @Id
-    private Long id;
+
     private Position position;
     private int health;
     private int maxHealth;
@@ -43,16 +42,13 @@ public class Ship extends Entity {
         return position;
     }
     return position;}
-     public boolean canShoot() {
+
+
+    public boolean canShoot() {
          return System.currentTimeMillis() - lastShotTime >= shootCooldown;
      }
 
-     public void shoot() {
-         if (canShoot()) {
-             // create bullet
-             lastShotTime = System.currentTimeMillis();
-         }
-     }
+
 
      public void takeDamage(int damage) {
          health -= damage;
@@ -64,7 +60,7 @@ public class Ship extends Entity {
          return health > 0;
      }
 
-    @Override
+
     public void update(double deltaTime) {
         shootCooldown += deltaTime;
     }
