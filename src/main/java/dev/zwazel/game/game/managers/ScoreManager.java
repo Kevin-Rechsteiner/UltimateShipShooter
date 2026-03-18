@@ -1,6 +1,7 @@
 package dev.zwazel.game.game.managers;
 
 import dev.zwazel.game.game.entities.Meteorite;
+import dev.zwazel.game.game.util.AsteroidSizes;
 
 public class ScoreManager {
     private Integer currentScore = 0;
@@ -11,16 +12,19 @@ public class ScoreManager {
         currentScore += score;
     }
     public void meteoritesDestroyed(Meteorite meteoritesDestroyed) {
-        Integer size = meteoritesDestroyed.getSize();
-        if (size == 1) {
+        AsteroidSizes size = meteoritesDestroyed.getSize();
+        switch (size) {
+            case SMALL -> {
                 addScore(20);
+            }
+            case MEDIUM -> {
+                addScore(40);
+            }
+            case BIG -> {
+                addScore(60);
+            }
         }
-        if (size == 2) {
-            addScore(40);
-        }
-        if (size == 3) {
-            addScore(60);
-        }
+
     }
 
 }

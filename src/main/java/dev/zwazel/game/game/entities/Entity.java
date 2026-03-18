@@ -9,7 +9,6 @@ import java.awt.*;
 
 @Getter
 public abstract class Entity {
-    @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
     public Position position;
     public Integer width;

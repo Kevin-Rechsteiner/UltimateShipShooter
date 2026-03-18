@@ -1,6 +1,7 @@
 package dev.zwazel.game.game.entities;
 
 
+import dev.zwazel.game.game.util.AsteroidSizes;
 import dev.zwazel.game.game.util.Position;
 import dev.zwazel.game.game.util.Velocity;
 import lombok.Getter;
@@ -15,14 +16,14 @@ public class Meteorite extends Entity {
 
     private Integer health;
     private Velocity velocity;
-    private Integer size;
+    private AsteroidSizes size;
 
     public Meteorite(Position position, Integer width, Integer height, Integer speed, Integer health, Boolean isActive, Integer size) {
         super(position, width, height, isActive);
         this.speed = speed;
         this.health = health;
         this.velocity = new Velocity(speed, 0);
-        this.size = size;
+        this.size = AsteroidSizes.MEDIUM;
 
 
     }

@@ -34,29 +34,31 @@ public class SpawnManager {
             int X = randomX.nextInt(401);
             Random randomSize = new Random();
             int size = randomSize.nextInt(4);
-            if (size == 1) {
-                Integer width = 20;
-                Integer height = 20;
-                Integer MeteoriteHealth = 2;
-            }
-            if (size == 2) {
-                Integer width = 30;
-                Integer height = 30;
-                Integer MeteoriteHealth = 3;
-            }
-            if (size == 3) {
-                Integer width = 40;
-                Integer height = 40;
-                Integer MeteoriteHealth = 4;
-            }
-            else {
-                Integer width = 10;
-                Integer height = 10;
-                Integer MeteoriteHealth = 1;
-
+            int width, height, meteoriteHealth;
+            switch (size) {
+                case 1 -> {
+                    width = 20;
+                    height = 20;
+                    meteoriteHealth = 2;
+                }
+                case 2 -> {
+                    width = 30;
+                    height = 30;
+                    meteoriteHealth = 3;
+                }
+                case 3 -> {
+                    width = 40;
+                    height = 40;
+                    meteoriteHealth = 4;
+                }
+                default -> {
+                    width = 10;
+                    height = 10;
+                    meteoriteHealth = 1;
+                }
             }
             Position position = new Position(X, 0);
-            Meteorite meteorite = new Meteorite(position, width, height, meteoriteSpeed, MeteoriteHealth, true, size);
+            Meteorite meteorite = new Meteorite(position, width, height, meteoriteSpeed, meteoriteHealth, true, size);
 
                }
 }

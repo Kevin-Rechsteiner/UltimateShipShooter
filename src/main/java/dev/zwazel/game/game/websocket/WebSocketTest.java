@@ -7,5 +7,6 @@ public class WebSocketTest {
     @GetMapping("/testrun")
     private String testRun() {
         ApplicationSecurityConfig applicationSecurityConfig = new ApplicationSecurityConfig();
+        return "a";
     }
 }
