@@ -10,6 +10,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 /**
  * Main entry point for the Spring Boot application.
@@ -164,17 +165,17 @@ public class GameApplication {
      * @param repository User Repository to interact with the Database. Dependency Injected by Spring.
      */
     @Bean
-    CommandLineRunner runner(UserRepository repository) {
+    CommandLineRunner runner(UserRepository repository, PasswordEncoder passwordEncoder) {
         return args -> {
             User user = new User();
             user.setEmail("student@example.com");
-            user.setPassword("StrongP@ssw0rd!");
+            user.setPassword(passwordEncoder.encode("StrongP@ssw0rd!"));
             user.setRole(Role.USER);
             repository.save(user);
 
             User admin = new User();
             admin.setEmail("admin@example.com");
-            admin.setPassword("StrongP@ssw0rd!");
+            admin.setPassword(passwordEncoder.encode("StrongP@ssw0rd!"));
             admin.setRole(Role.ADMIN);
             repository.save(admin);
         };

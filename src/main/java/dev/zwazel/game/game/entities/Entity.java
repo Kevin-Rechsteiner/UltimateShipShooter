@@ -4,9 +4,11 @@ import dev.zwazel.game.game.util.Position;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.awt.*;
 
+@Setter
 @Getter
 public abstract class Entity {
     private Long id;

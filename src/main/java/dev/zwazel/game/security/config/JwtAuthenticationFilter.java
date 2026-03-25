@@ -87,7 +87,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         // STEP 2: Skip authentication for auth endpoints and requests without JWT
         // We don't need to authenticate /auth/register or /auth/authenticate endpoints
-        if ((jwt == null && (authHeader == null || !authHeader.startsWith("Bearer "))) || request.getRequestURI().contains("/auth")) {
+        if ((jwt == null && (authHeader == null || !authHeader.startsWith("Bearer "))) 
+                || request.getRequestURI().contains("/auth")
+                || request.getRequestURI().contains("/ws")) {
             filterChain.doFilter(request, response);  // Pass to next filter without authentication
             return;
         }

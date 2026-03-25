@@ -4,7 +4,7 @@ public class GameConstants {
     public static final Integer width = 800; // map width
     public static final Integer height = 600; // map height
     public static final Position playerStartPosition = new Position(400, 20);
-    public static final Integer shipHeight = 50;
+    public static final Integer shipHeight = 30;
     public static final Integer shipWidth = 50;
     public static final Integer movementSpeedShip = 5;
     public static final Integer bulletPixelPerFrame = 10;

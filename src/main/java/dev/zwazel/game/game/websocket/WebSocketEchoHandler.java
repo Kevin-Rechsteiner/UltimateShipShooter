@@ -1,5 +1,6 @@
 package dev.zwazel.game.game.websocket;
 
+import dev.zwazel.game.game.util.GameConstants;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jspecify.annotations.NonNull;
@@ -9,12 +10,17 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * WebSocket Handler für das Asteroid-Game.
+ * Delegiert Game-Logik an spezialisierte Manager.
+ */
 public class WebSocketEchoHandler extends TextWebSocketHandler {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -22,17 +28,21 @@ public class WebSocketEchoHandler extends TextWebSocketHandler {
     private static final int GAME_WIDTH = 720;
     private static final int GAME_HEIGHT = 520;
     private static final int PLAYER_WIDTH = 52;
-    private static final int PLAYER_HEIGHT = 90;
-    private static final int PLAYER_Y = GAME_HEIGHT - PLAYER_HEIGHT - 20;
-    private static final double PLAYER_SPEED_PX_PER_SECOND = 320.0;
+    private static final int PLAYER_HEIGHT = GameConstants.shipHeight;
+    private static final int INITIAL_LIVES = 3;
 
-    private final Map<String, PlayerInputState> stateBySession = new ConcurrentHashMap<>();
+    private final Map<String, GameSessionState> sessionStates = new ConcurrentHashMap<>();
     private final Map<String, WebSocketSession> sessionsById = new ConcurrentHashMap<>();
+
+    private final BulletManager bulletManager = new BulletManager();
+    private final AsteroidManager asteroidManager = new AsteroidManager();
+    private final CollisionDetector collisionDetector = new CollisionDetector();
+    private final GameStateUpdater stateUpdater = new GameStateUpdater();
+
     private final ScheduledExecutorService gameTick = Executors.newSingleThreadScheduledExecutor();
     private volatile long lastTickNanos = System.nanoTime();
 
     public WebSocketEchoHandler() {
-        // Server-authoritative movement tick: keeps moving while key is held.
         gameTick.scheduleAtFixedRate(this::tick, 0, 16, TimeUnit.MILLISECONDS);
     }
 
@@ -40,22 +50,9 @@ public class WebSocketEchoHandler extends TextWebSocketHandler {
     public void afterConnectionEstablished(@NonNull WebSocketSession session) throws IOException {
         double initialX = (GAME_WIDTH - PLAYER_WIDTH) / 2.0;
         sessionsById.put(session.getId(), session);
-        stateBySession.put(session.getId(), new PlayerInputState(initialX, false, false));
+        sessionStates.put(session.getId(), new GameSessionState(initialX, INITIAL_LIVES, 0));
 
-        Map<String, Object> statePayload = new HashMap<>();
-        statePayload.put("width", GAME_WIDTH);
-        statePayload.put("height", GAME_HEIGHT);
-
-        Map<String, Object> player = new HashMap<>();
-        player.put("x", (int) Math.round(initialX));
-        player.put("y", PLAYER_Y);
-        player.put("width", PLAYER_WIDTH);
-        player.put("height", PLAYER_HEIGHT);
-        player.put("speed", 320);
-
-        statePayload.put("player", player);
-        statePayload.put("asteroids", new Object[]{});
-
+        Map<String, Object> statePayload = stateUpdater.buildInitialStatePayload(initialX);
         Map<String, Object> stateEvent = new HashMap<>();
         stateEvent.put("type", "state");
         stateEvent.put("payload", statePayload);
@@ -76,21 +73,34 @@ public class WebSocketEchoHandler extends TextWebSocketHandler {
         if ("ping".equals(type) && payloadObj instanceof Map<?, ?> payload) {
             Map<String, Object> pong = new HashMap<>();
             pong.put("type", "pong");
-            pong.put("payload", payload); // echo { at }
-
+            pong.put("payload", payload);
             session.sendMessage(new TextMessage(objectMapper.writeValueAsString(pong)));
             return;
         }
 
-        if ("player_input".equals(type) && payloadObj instanceof Map<?, ?> payload) {
-            // Accept both {left,right} and {s,d} naming from frontend.
-            boolean left = Boolean.TRUE.equals(payload.get("left")) || Boolean.TRUE.equals(payload.get("s"));
-            boolean right = Boolean.TRUE.equals(payload.get("right")) || Boolean.TRUE.equals(payload.get("d"));
+        GameSessionState state = sessionStates.get(session.getId());
+        if (state == null) return;
 
-            stateBySession.computeIfPresent(
-                    session.getId(),
-                    (id, current) -> new PlayerInputState(current.x(), left, right)
-            );
+        if ("player_input".equals(type) && payloadObj instanceof Map<?, ?> payload) {
+            boolean left = Boolean.TRUE.equals(payload.get("left")) || Boolean.TRUE.equals(payload.get("a"));
+            boolean right = Boolean.TRUE.equals(payload.get("right")) || Boolean.TRUE.equals(payload.get("d"));
+            boolean shoot = Boolean.TRUE.equals(payload.get("shoot"))
+                    || Boolean.TRUE.equals(payload.get("space"))
+                    || Boolean.TRUE.equals(payload.get("fire"));
+
+            state.setLeftPressed(left);
+            state.setRightPressed(right);
+            state.setShootPressed(shoot);
+            return;
+        }
+
+        if ("game_control".equals(type) && payloadObj instanceof Map<?, ?> payload) {
+            if (payload.containsKey("paused")) {
+                state.setPaused(parseBoolean(payload.get("paused")));
+            } else if (Boolean.TRUE.equals(payload.get("toggle_pause"))) {
+                state.setPaused(!state.isPaused());
+            }
+            sendStateUpdate(session, state);
             return;
         }
 
@@ -103,56 +113,121 @@ public class WebSocketEchoHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionClosed(@NonNull WebSocketSession session, org.springframework.web.socket.CloseStatus status) {
         sessionsById.remove(session.getId());
-        stateBySession.remove(session.getId());
-    }
-
-    private double clamp(double value, double min, double max) {
-        return Math.max(min, Math.min(max, value));
+        sessionStates.remove(session.getId());
     }
 
     private void tick() {
         long now = System.nanoTime();
         double deltaSeconds = (now - lastTickNanos) / 1_000_000_000.0;
         lastTickNanos = now;
-        // Prevent huge jumps after debugger pauses or temporary stalls.
         deltaSeconds = Math.min(deltaSeconds, 0.05);
 
-        for (Map.Entry<String, PlayerInputState> entry : stateBySession.entrySet()) {
+        for (Map.Entry<String, GameSessionState> entry : sessionStates.entrySet()) {
             String sessionId = entry.getKey();
-            PlayerInputState current = entry.getValue();
+            GameSessionState state = entry.getValue();
             WebSocketSession session = sessionsById.get(sessionId);
 
-            if (session == null || !session.isOpen()) {
+            if (session == null || !session.isOpen()) continue;
+
+            // Game Over → Pause
+            if (state.isGameOver()) {
+                state.setPaused(true);
+            }
+
+            // Wenn pausiert → nur State senden, keine Logik
+            if (state.isPaused()) {
+                sendStateUpdate(session, state);
                 continue;
             }
 
-            int direction = (current.left() ? -1 : 0) + (current.right() ? 1 : 0);
-            if (direction == 0) {
-                continue;
+            // Bewegung
+            int direction = (state.isLeftPressed() ? -1 : 0) + (state.isRightPressed() ? 1 : 0);
+            double nextX = state.getPlayerX();
+            if (direction != 0) {
+                nextX = clamp(
+                        state.getPlayerX() + direction * 320.0 * deltaSeconds,
+                        0,
+                        GAME_WIDTH - PLAYER_WIDTH
+                );
+                state.setPlayerX(nextX);
             }
 
-            double nextX = clamp(
-                    current.x() + direction * PLAYER_SPEED_PX_PER_SECOND * deltaSeconds,
-                    0,
-                    GAME_WIDTH - PLAYER_WIDTH
+            // Bullets
+            long nowMillis = System.currentTimeMillis();
+            bulletManager.updateBullets(
+                    state.getBullets(),
+                    state.getPlayerX(),
+                    state.isShootPressed(),
+                    state.getLastShotMillis(),
+                    nowMillis,
+                    deltaSeconds
             );
-            stateBySession.put(sessionId, new PlayerInputState(nextX, current.left(), current.right()));
+            state.setLastShotMillis(bulletManager.getLastShotMillis(
+                    state.isShootPressed(),
+                    state.getLastShotMillis(),
+                    nowMillis
+            ));
 
-            Map<String, Object> payload = new HashMap<>();
-            payload.put("player", Map.of("x", (int) Math.round(nextX)));
+            // Asteroids
+            asteroidManager.updateAsteroids(
+                    state.getAsteroids(),
+                    state.getLastAsteroidSpawnMillis(),
+                    nowMillis,
+                    deltaSeconds
+            );
+            state.setLastAsteroidSpawnMillis(asteroidManager.getLastSpawnMillis(
+                    state.getLastAsteroidSpawnMillis(),
+                    nowMillis
+            ));
 
-            Map<String, Object> event = new HashMap<>();
-            event.put("type", "state");
-            event.put("payload", payload);
+            // Kollisionen
+            CollisionDetector.CollisionResult collisions = collisionDetector.detectCollisions(
+                    state.getBullets(),
+                    state.getAsteroids(),
+                    state.getPlayerX()
+            );
 
-            try {
-                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(event)));
-            } catch (IOException ignored) {
-                // Connection will be cleaned up by close handling.
+            // Damage entfernen
+            state.getBullets().removeIf(b -> collisions.hitBulletIds.contains(b.id()));
+            state.getAsteroids().removeIf(a -> collisions.hitAsteroidIds.contains(a.id()));
+
+            // Score + Leben
+            state.setScore(state.getScore() + collisions.scoreGain);
+            if (collisions.shipHitCount > 0) {
+                state.setLives(Math.max(0, state.getLives() - collisions.shipHitCount));
             }
+
+            sendStateUpdate(session, state);
         }
     }
 
-    private record PlayerInputState(double x, boolean left, boolean right) {
+    private void sendStateUpdate(WebSocketSession session, GameSessionState state) {
+        if (!session.isOpen()) return;
+
+        Map<String, Object> payload = stateUpdater.buildStatePayload(
+                state,
+                state.getBullets(),
+                state.getAsteroids()
+        );
+
+        Map<String, Object> event = new HashMap<>();
+        event.put("type", "state");
+        event.put("payload", payload);
+
+        try {
+            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(event)));
+        } catch (IOException ignored) {
+            // Connection cleanup happens in afterConnectionClosed
+        }
+    }
+
+    private double clamp(double value, double min, double max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    private boolean parseBoolean(Object value) {
+        if (value instanceof Boolean b) return b;
+        if (value instanceof String s) return Boolean.parseBoolean(s);
+        return false;
     }
 }
