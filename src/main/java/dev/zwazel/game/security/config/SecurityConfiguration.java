@@ -89,7 +89,7 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(request ->
                         request
                                 // Rule 1: Public endpoints (no authentication required)
-                                .requestMatchers("/", "/index.html", "/favicon.ico", "/ws", "/error", "/api/v1/auth/**").permitAll()
+                                .requestMatchers("/", "/index.html", "/favicon.ico", "/ws/**", "/error", "/api/v1/auth/**").permitAll()
                                 // Rule 2: Admin-only resource creation
                                 .requestMatchers(HttpMethod.POST, "/api/v1/resource").hasRole("ADMIN")
                                 // Rule 3: Catch-all (all other endpoints require authentication)

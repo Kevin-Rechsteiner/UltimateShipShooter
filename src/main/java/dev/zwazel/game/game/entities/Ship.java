@@ -13,8 +13,8 @@ public class Ship extends Entity {
     private Position position;
     private int health;
     private int maxHealth;
-    private double width;
-    private double height;
+    private Integer width;
+    private Integer height;
     private double lastShotTime;
     private double shootCooldown;
 
@@ -25,7 +25,7 @@ public class Ship extends Entity {
 
         this.position = position;
         this.health = health;
-        this.maxHealth = maxHealth;;
+        this.maxHealth = maxHealth;
         this.width = width;
         this.height = height;
         this.shootCooldown = shootCooldown;

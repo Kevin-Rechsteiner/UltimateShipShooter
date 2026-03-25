@@ -11,8 +11,8 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(new dev.zwazel.game.game.websocket.WebSocketEchoHandler(), "/ws")
-                .setAllowedOriginPatterns("*");
+        registry.addHandler(new dev.zwazel.game.game.websocket.WebSocketEchoHandler(), "/ws/game")
+                .setAllowedOrigins("*");
     }
 }
 

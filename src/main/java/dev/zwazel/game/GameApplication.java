@@ -146,7 +146,7 @@ public class GameApplication {
      * @param args Command-line arguments (optional). Passed to Spring for configuration override.
      *             If empty, application uses defaults from application.properties.
      */
-    static void main(String[] args) {
+    public static void main(String[] args) {
         // Step 1: Initialize Spring Boot application
         // SpringApplication.run() handles:
         // - Creating Spring ApplicationContext (container for all beans)

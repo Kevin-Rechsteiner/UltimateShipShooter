@@ -23,19 +23,16 @@ public abstract class Entity {
      }
     public abstract void update(double deltaTime);
 
-    public Position setPosition(Position position) {
+    public void setPosition(Position position) {
             this.position = position;
-            return position;
      }
 
-    public Integer setWidth(Integer width) {
+    public void setWidth(Integer width) {
          this.width = width;
-         return width;
      }
 
-    public Integer setHeight(Integer height) {
+    public void setHeight(Integer height) {
             this.height = height;
-            return height;
      }
 
     public void setIsActive(Boolean isActive) {
