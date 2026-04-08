@@ -15,6 +15,7 @@ public class GameSessionState {
     private int score;
     private int highScore;
     private boolean paused;
+    private long lastStatePushNanos;
 
     public GameSessionState(
             double playerX,
@@ -33,6 +34,7 @@ public class GameSessionState {
         this.score = initialScore;
         this.highScore = initialScore;
         this.paused = false;
+        this.lastStatePushNanos = 0L;
     }
 
     public double getPlayerX() { return playerX; }
@@ -70,6 +72,9 @@ public class GameSessionState {
 
     public boolean isPaused() { return paused; }
     public void setPaused(boolean paused) { this.paused = paused; }
+
+    public long getLastStatePushNanos() { return lastStatePushNanos; }
+    public void setLastStatePushNanos(long lastStatePushNanos) { this.lastStatePushNanos = lastStatePushNanos; }
 
 
     public boolean isGameOver() { return lives <= 0; }

@@ -20,7 +20,7 @@ public class BulletManager {
             long nowMillis,
             double deltaSeconds
     ) {
-        // Spawn bei Cooldown
+        // cooldownspawn
         if (shootPressed && (nowMillis - lastShotMillis) >= SHOOT_COOLDOWN_MILLIS) {
             double bulletX = playerX + (PLAYER_WIDTH / 2.0) - (BULLET_SIZE / 2.0);
             double bulletY = PLAYER_Y - BULLET_SIZE;

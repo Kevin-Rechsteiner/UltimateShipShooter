@@ -1,8 +1,5 @@
 package dev.zwazel.game.game.websocket;
 
-/**
- * Repräsentiert einen Bullet im Spiel.
- */
 public class BulletState {
     private String id;
     private double x;

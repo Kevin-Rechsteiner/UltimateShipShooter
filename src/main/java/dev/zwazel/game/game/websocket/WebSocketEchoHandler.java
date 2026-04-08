@@ -29,6 +29,8 @@ public class WebSocketEchoHandler extends TextWebSocketHandler {
     private static final int PLAYER_WIDTH = 52;
     private static final int PLAYER_HEIGHT = GameConstants.shipHeight;
     private static final int INITIAL_LIVES = 3;
+    private static final long ACTIVE_STATE_PUSH_INTERVAL_NANOS = 16_000_000L;
+    private static final long PAUSED_STATE_PUSH_INTERVAL_NANOS = 120_000_000L;
 
     private final Map<String, GameSessionState> sessionStates = new ConcurrentHashMap<>();
     private final Map<String, WebSocketSession> sessionsById = new ConcurrentHashMap<>();
@@ -48,14 +50,16 @@ public class WebSocketEchoHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionEstablished(@NonNull WebSocketSession session) throws IOException {
         double initialX = (GAME_WIDTH - PLAYER_WIDTH) / 2.0;
+        GameSessionState state = new GameSessionState(initialX, INITIAL_LIVES, 0);
         sessionsById.put(session.getId(), session);
-        sessionStates.put(session.getId(), new GameSessionState(initialX, INITIAL_LIVES, 0));
+        sessionStates.put(session.getId(), state);
 
         Map<String, Object> statePayload = stateUpdater.buildInitialStatePayload(initialX);
         Map<String, Object> stateEvent = new HashMap<>();
         stateEvent.put("type", "state");
         stateEvent.put("payload", statePayload);
 
+        state.setLastStatePushNanos(System.nanoTime());
         session.sendMessage(new TextMessage(objectMapper.writeValueAsString(stateEvent)));
     }
 
@@ -68,6 +72,7 @@ public class WebSocketEchoHandler extends TextWebSocketHandler {
 
         String type = String.valueOf(incoming.get("type"));
         Object payloadObj = incoming.get("payload");
+        Map<?, ?> resolvedPayload = payloadObj instanceof Map<?, ?> payloadMap ? payloadMap : incoming;
 
         if ("ping".equals(type) && payloadObj instanceof Map<?, ?> payload) {
             Map<String, Object> pong = new HashMap<>();
@@ -80,32 +85,42 @@ public class WebSocketEchoHandler extends TextWebSocketHandler {
         GameSessionState state = sessionStates.get(session.getId());
         if (state == null) return;
 
-        if ("player_input".equals(type) && payloadObj instanceof Map<?, ?> payload) {
-            boolean left = Boolean.TRUE.equals(payload.get("left")) || Boolean.TRUE.equals(payload.get("a"));
-            boolean right = Boolean.TRUE.equals(payload.get("right")) || Boolean.TRUE.equals(payload.get("d"));
-            boolean shoot = Boolean.TRUE.equals(payload.get("shoot"))
-                    || Boolean.TRUE.equals(payload.get("space"))
-                    || Boolean.TRUE.equals(payload.get("fire"));
+        if (isPlayerInputType(type)) {
+            boolean left = readInputFlag(resolvedPayload, "left", "a", "s", "ArrowLeft", "keyA", "KeyA", "keyS", "KeyS", "moveLeft");
+            boolean right = readInputFlag(resolvedPayload, "right", "d", "ArrowRight", "keyD", "KeyD", "moveRight");
+            boolean shoot = readInputFlag(resolvedPayload, "shoot", "space", "fire", "Space", " ", "shootPressed", "isShooting");
 
-            state.setLeftPressed(left);
-            state.setRightPressed(right);
-            state.setShootPressed(shoot);
+            double horizontal = readInputAxis(resolvedPayload, "horizontal", "x", "moveX", "axisX");
+            if (horizontal < -0.001) left = true;
+            if (horizontal > 0.001) right = true;
+
+            synchronized (state) {
+                state.setLeftPressed(left);
+                state.setRightPressed(right);
+                state.setShootPressed(shoot);
+            }
             return;
         }
 
         if ("game_control".equals(type) && payloadObj instanceof Map<?, ?> payload) {
             if (Boolean.TRUE.equals(payload.get("restart")) || Boolean.TRUE.equals(payload.get("reset"))) {
-                resetGameState(state);
-                sendStateUpdate(session, state);
+                synchronized (state) {
+                    resetGameState(state);
+                }
+                sendStateUpdate(session, state, true);
                 return;
             }
 
             if (payload.containsKey("paused")) {
-                state.setPaused(parseBoolean(payload.get("paused")));
+                synchronized (state) {
+                    state.setPaused(parseBoolean(payload.get("paused")));
+                }
             } else if (Boolean.TRUE.equals(payload.get("toggle_pause"))) {
-                state.setPaused(!state.isPaused());
+                synchronized (state) {
+                    state.setPaused(!state.isPaused());
+                }
             }
-            sendStateUpdate(session, state);
+            sendStateUpdate(session, state, true);
             return;
         }
 
@@ -127,119 +142,120 @@ public class WebSocketEchoHandler extends TextWebSocketHandler {
         lastTickNanos = now;
         deltaSeconds = Math.min(deltaSeconds, 0.05);
 
-        for (Map.Entry<String, GameSessionState> entry : sessionStates.entrySet()) {
-            String sessionId = entry.getKey();
-            GameSessionState state = entry.getValue();
-            WebSocketSession session = sessionsById.get(sessionId);
+        try {
+            for (Map.Entry<String, GameSessionState> entry : sessionStates.entrySet()) {
+                String sessionId = entry.getKey();
+                GameSessionState state = entry.getValue();
+                WebSocketSession session = sessionsById.get(sessionId);
 
-            if (session == null || !session.isOpen()) continue;
+                if (session == null || !session.isOpen()) continue;
 
-            // Game Over → Pause
-            if (state.isGameOver()) {
-                state.setPaused(true);
-            }
+                synchronized (state) {
+                    if (state.isGameOver()) {
+                        state.setPaused(true);
+                    }
 
-            // Wenn pausiert → nur State senden, keine Logik
-            if (state.isPaused()) {
-                sendStateUpdate(session, state);
-                continue;
-            }
-
-            // Bewegung
-            int direction = (state.isLeftPressed() ? -1 : 0) + (state.isRightPressed() ? 1 : 0);
-            double nextX = state.getPlayerX();
-            if (direction != 0) {
-                nextX = clamp(
-                        state.getPlayerX() + direction * 320.0 * deltaSeconds,
-                        0,
-                        GAME_WIDTH - PLAYER_WIDTH
-                );
-                state.setPlayerX(nextX);
-            }
-
-            // Bullets
-            long nowMillis = System.currentTimeMillis();
-            bulletManager.updateBullets(
-                    state.getBullets(),
-                    state.getPlayerX(),
-                    state.isShootPressed(),
-                    state.getLastShotMillis(),
-                    nowMillis,
-                    deltaSeconds
-            );
-            state.setLastShotMillis(bulletManager.getLastShotMillis(
-                    state.isShootPressed(),
-                    state.getLastShotMillis(),
-                    nowMillis
-            ));
-
-            // Asteroids
-            asteroidManager.updateAsteroids(
-                    state.getAsteroids(),
-                    state.getLastAsteroidSpawnMillis(),
-                    nowMillis,
-                    deltaSeconds
-            );
-            state.setLastAsteroidSpawnMillis(asteroidManager.getLastSpawnMillis(
-                    state.getLastAsteroidSpawnMillis(),
-                    nowMillis
-            ));
-
-            // Kollisionen
-            CollisionDetector.CollisionResult collisions = collisionDetector.detectCollisions(
-                    state.getBullets(),
-                    state.getAsteroids(),
-                    state.getPlayerX()
-            );
-
-            // Damage entfernen
-            state.getBullets().removeIf(b -> collisions.hitBulletIds.contains(b.id()));
-
-            int scoreGain = 0;
-            if (!collisions.bulletHitsPerAsteroidId.isEmpty()) {
-                List<AsteroidState> updatedAsteroids = new ArrayList<>(state.getAsteroids().size());
-                for (AsteroidState asteroid : state.getAsteroids()) {
-                    int hits = collisions.bulletHitsPerAsteroidId.getOrDefault(asteroid.id(), 0);
-                    int nextHp = asteroid.hp() - hits;
-
-                    if (nextHp <= 0) {
-                        scoreGain += scoreForAsteroidSize(asteroid.size());
+                    if (state.isPaused()) {
+                        sendStateUpdate(session, state, false);
                         continue;
                     }
 
-                    if (hits > 0) {
-                        updatedAsteroids.add(new AsteroidState(
-                                asteroid.id(),
-                                asteroid.x(),
-                                asteroid.y(),
-                                asteroid.size(),
-                                nextHp
-                        ));
-                    } else {
-                        updatedAsteroids.add(asteroid);
+                    int direction = (state.isLeftPressed() ? -1 : 0) + (state.isRightPressed() ? 1 : 0);
+                    double nextX = state.getPlayerX();
+                    if (direction != 0) {
+                        nextX = clamp(
+                                state.getPlayerX() + direction * 320.0 * deltaSeconds,
+                                0,
+                                GAME_WIDTH - PLAYER_WIDTH
+                        );
+                        state.setPlayerX(nextX);
                     }
+
+                    long nowMillis = System.currentTimeMillis();
+                    bulletManager.updateBullets(
+                            state.getBullets(),
+                            state.getPlayerX(),
+                            state.isShootPressed(),
+                            state.getLastShotMillis(),
+                            nowMillis,
+                            deltaSeconds
+                    );
+                    state.setLastShotMillis(bulletManager.getLastShotMillis(
+                            state.isShootPressed(),
+                            state.getLastShotMillis(),
+                            nowMillis
+                    ));
+
+                    asteroidManager.updateAsteroids(
+                            state.getAsteroids(),
+                            state.getLastAsteroidSpawnMillis(),
+                            nowMillis,
+                            deltaSeconds
+                    );
+                    state.setLastAsteroidSpawnMillis(asteroidManager.getLastSpawnMillis(
+                            state.getLastAsteroidSpawnMillis(),
+                            nowMillis
+                    ));
+
+                    CollisionDetector.CollisionResult collisions = collisionDetector.detectCollisions(
+                            state.getBullets(),
+                            state.getAsteroids(),
+                            state.getPlayerX()
+                    );
+
+                    state.getBullets().removeIf(b -> collisions.hitBulletIds.contains(b.id()));
+
+                    int scoreGain = 0;
+                    if (!collisions.bulletHitsPerAsteroidId.isEmpty()) {
+                        List<AsteroidState> updatedAsteroids = new ArrayList<>(state.getAsteroids().size());
+                        for (AsteroidState asteroid : state.getAsteroids()) {
+                            int hits = collisions.bulletHitsPerAsteroidId.getOrDefault(asteroid.id(), 0);
+                            int nextHp = asteroid.hp() - hits;
+
+                            if (nextHp <= 0) {
+                                scoreGain += scoreForAsteroidSize(asteroid.size());
+                                continue;
+                            }
+
+                            if (hits > 0) {
+                                updatedAsteroids.add(new AsteroidState(
+                                        asteroid.id(),
+                                        asteroid.x(),
+                                        asteroid.y(),
+                                        asteroid.size(),
+                                        nextHp
+                                ));
+                            } else {
+                                updatedAsteroids.add(asteroid);
+                            }
+                        }
+                        state.setAsteroids(updatedAsteroids);
+                    }
+
+                    state.getAsteroids().removeIf(a -> collisions.shipHitAsteroidIds.contains(a.id()));
+
+                    state.setScore(state.getScore() + scoreGain);
+                    if (state.getScore() > state.getHighScore()) {
+                        state.setHighScore(state.getScore());
+                    }
+                    if (collisions.shipHitCount > 0) {
+                        state.setLives(Math.max(0, state.getLives() - collisions.shipHitCount));
+                    }
+
+                    sendStateUpdate(session, state, false);
                 }
-                state.setAsteroids(updatedAsteroids);
             }
-
-            state.getAsteroids().removeIf(a -> collisions.shipHitAsteroidIds.contains(a.id()));
-
-            // Score + Leben
-            state.setScore(state.getScore() + scoreGain);
-            if (state.getScore() > state.getHighScore()) {
-                state.setHighScore(state.getScore());
-            }
-            if (collisions.shipHitCount > 0) {
-                state.setLives(Math.max(0, state.getLives() - collisions.shipHitCount));
-            }
-
-            sendStateUpdate(session, state);
+        } catch (RuntimeException exception) {
+            exception.printStackTrace();
         }
     }
 
-
-    private void sendStateUpdate(WebSocketSession session, GameSessionState state) {
+    private void sendStateUpdate(WebSocketSession session, GameSessionState state, boolean force) {
         if (!session.isOpen()) return;
+
+        if (!force && !shouldBroadcastNow(state)) {
+            return;
+        }
 
         Map<String, Object> payload = stateUpdater.buildStatePayload(
                 state,
@@ -253,9 +269,14 @@ public class WebSocketEchoHandler extends TextWebSocketHandler {
 
         try {
             session.sendMessage(new TextMessage(objectMapper.writeValueAsString(event)));
-        } catch (IOException ignored) {
-            // Connection cleanup happens in afterConnectionClosed
-        }
+            state.setLastStatePushNanos(System.nanoTime());
+        } catch (IOException ignored) { }
+    }
+
+    private boolean shouldBroadcastNow(GameSessionState state) {
+        long now = System.nanoTime();
+        long interval = state.isPaused() ? PAUSED_STATE_PUSH_INTERVAL_NANOS : ACTIVE_STATE_PUSH_INTERVAL_NANOS;
+        return (now - state.getLastStatePushNanos()) >= interval;
     }
 
     private double clamp(double value, double min, double max) {
@@ -265,6 +286,90 @@ public class WebSocketEchoHandler extends TextWebSocketHandler {
     private boolean parseBoolean(Object value) {
         if (value instanceof Boolean b) return b;
         if (value instanceof String s) return Boolean.parseBoolean(s);
+        return false;
+    }
+
+    private boolean isPlayerInputType(String type) {
+        return "player_input".equals(type)
+                || "playerInput".equals(type)
+                || "input".equals(type)
+                || "key_input".equals(type)
+                || "controls".equals(type);
+    }
+
+    private boolean readInputFlag(Map<?, ?> payload, String... keys) {
+        if (hasTruthyValue(payload, keys)) {
+            return true;
+        }
+
+        Object nestedInput = payload.get("input");
+        if (nestedInput instanceof Map<?, ?> nestedMap && hasTruthyValue(nestedMap, keys)) {
+            return true;
+        }
+
+        Object nestedKeys = payload.get("keys");
+        if (nestedKeys instanceof Map<?, ?> nestedMap && hasTruthyValue(nestedMap, keys)) {
+            return true;
+        }
+
+        Object nestedMovement = payload.get("movement");
+        return nestedMovement instanceof Map<?, ?> nestedMap && hasTruthyValue(nestedMap, keys);
+    }
+
+    private boolean hasTruthyValue(Map<?, ?> payload, String... keys) {
+        for (String key : keys) {
+            if (toBoolean(payload.get(key))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private double readInputAxis(Map<?, ?> payload, String... keys) {
+        Double direct = findNumericValue(payload, keys);
+        if (direct != null) return direct;
+
+        Object nestedInput = payload.get("input");
+        if (nestedInput instanceof Map<?, ?> nestedMap) {
+            Double nested = findNumericValue(nestedMap, keys);
+            if (nested != null) return nested;
+        }
+
+        Object nestedMovement = payload.get("movement");
+        if (nestedMovement instanceof Map<?, ?> nestedMap) {
+            Double nested = findNumericValue(nestedMap, keys);
+            if (nested != null) return nested;
+        }
+
+        return 0.0;
+    }
+
+    private Double findNumericValue(Map<?, ?> payload, String... keys) {
+        for (String key : keys) {
+            Object value = payload.get(key);
+            if (value instanceof Number number) {
+                return number.doubleValue();
+            }
+            if (value instanceof String stringValue) {
+                try {
+                    return Double.parseDouble(stringValue);
+                } catch (NumberFormatException ignored) { }
+            }
+        }
+        return null;
+    }
+
+    private boolean toBoolean(Object value) {
+        if (value instanceof Boolean boolValue) {
+            return boolValue;
+        }
+        if (value instanceof Number number) {
+            return number.doubleValue() != 0.0;
+        }
+        if (value instanceof String stringValue) {
+            String normalized = stringValue.trim().toLowerCase();
+            return "true".equals(normalized) || "1".equals(normalized) || "yes".equals(normalized) || "on".equals(normalized);
+        }
         return false;
     }
 
