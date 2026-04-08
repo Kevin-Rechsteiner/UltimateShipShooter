@@ -54,6 +54,14 @@ public class JwtServiceImpl implements JwtService {
     @Value("${jwt.cookie-max-age}")
     private long jwtCookieMaxAge;
 
+    /** Whether cookie should be Secure (HTTPS only) */
+    @Value("${jwt.cookie-secure:false}")
+    private boolean jwtCookieSecure;
+
+    /** SameSite policy for cookie (Strict/Lax/None) */
+    @Value("${jwt.cookie-same-site:Lax}")
+    private String jwtCookieSameSite;
+
     @Override
     public String extractUserName(String token) {
         return extractClaim(token, Claims::getSubject);
@@ -190,8 +198,8 @@ public class JwtServiceImpl implements JwtService {
                 .path("/")  // Cookie valid for all application paths
                 .maxAge(jwtCookieMaxAge)  // How long browser keeps the cookie
                 .httpOnly(true)  // JavaScript cannot read this cookie
-                .secure(true)  // Only sent over HTTPS
-                .sameSite("Strict")  // Not sent in cross-site requests
+                .secure(jwtCookieSecure)  // Only sent over HTTPS when enabled
+                .sameSite(jwtCookieSameSite)  // Controlled via configuration
                 .build();
     }
 

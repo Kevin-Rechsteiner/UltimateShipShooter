@@ -2,8 +2,10 @@ package dev.zwazel.game.user;
 
 import dev.zwazel.game.security.config.ApplicationSecurityConfig;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.userdetails.UserDetailsService;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -116,4 +118,6 @@ public interface UserRepository extends JpaRepository<User, UUID> {
      * @see org.springframework.security.core.userdetails.UsernameNotFoundException
      */
     Optional<User> findUserByEmail(String email);
+
+    List<User> findByOrderByHighScoreDesc(Pageable pageable);
 }

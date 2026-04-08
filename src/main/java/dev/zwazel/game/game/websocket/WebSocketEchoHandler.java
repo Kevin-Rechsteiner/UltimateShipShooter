@@ -4,11 +4,13 @@ import dev.zwazel.game.game.util.GameConstants;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jspecify.annotations.NonNull;
+import org.springframework.stereotype.Component;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,10 +19,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-/**
- * WebSocket Handler für das Asteroid-Game.
- * Delegiert Game-Logik an spezialisierte Manager.
- */
+@Component
 public class WebSocketEchoHandler extends TextWebSocketHandler {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -95,6 +94,12 @@ public class WebSocketEchoHandler extends TextWebSocketHandler {
         }
 
         if ("game_control".equals(type) && payloadObj instanceof Map<?, ?> payload) {
+            if (Boolean.TRUE.equals(payload.get("restart")) || Boolean.TRUE.equals(payload.get("reset"))) {
+                resetGameState(state);
+                sendStateUpdate(session, state);
+                return;
+            }
+
             if (payload.containsKey("paused")) {
                 state.setPaused(parseBoolean(payload.get("paused")));
             } else if (Boolean.TRUE.equals(payload.get("toggle_pause"))) {
@@ -189,10 +194,41 @@ public class WebSocketEchoHandler extends TextWebSocketHandler {
 
             // Damage entfernen
             state.getBullets().removeIf(b -> collisions.hitBulletIds.contains(b.id()));
-            state.getAsteroids().removeIf(a -> collisions.hitAsteroidIds.contains(a.id()));
+
+            int scoreGain = 0;
+            if (!collisions.bulletHitsPerAsteroidId.isEmpty()) {
+                List<AsteroidState> updatedAsteroids = new ArrayList<>(state.getAsteroids().size());
+                for (AsteroidState asteroid : state.getAsteroids()) {
+                    int hits = collisions.bulletHitsPerAsteroidId.getOrDefault(asteroid.id(), 0);
+                    int nextHp = asteroid.hp() - hits;
+
+                    if (nextHp <= 0) {
+                        scoreGain += scoreForAsteroidSize(asteroid.size());
+                        continue;
+                    }
+
+                    if (hits > 0) {
+                        updatedAsteroids.add(new AsteroidState(
+                                asteroid.id(),
+                                asteroid.x(),
+                                asteroid.y(),
+                                asteroid.size(),
+                                nextHp
+                        ));
+                    } else {
+                        updatedAsteroids.add(asteroid);
+                    }
+                }
+                state.setAsteroids(updatedAsteroids);
+            }
+
+            state.getAsteroids().removeIf(a -> collisions.shipHitAsteroidIds.contains(a.id()));
 
             // Score + Leben
-            state.setScore(state.getScore() + collisions.scoreGain);
+            state.setScore(state.getScore() + scoreGain);
+            if (state.getScore() > state.getHighScore()) {
+                state.setHighScore(state.getScore());
+            }
             if (collisions.shipHitCount > 0) {
                 state.setLives(Math.max(0, state.getLives() - collisions.shipHitCount));
             }
@@ -200,6 +236,7 @@ public class WebSocketEchoHandler extends TextWebSocketHandler {
             sendStateUpdate(session, state);
         }
     }
+
 
     private void sendStateUpdate(WebSocketSession session, GameSessionState state) {
         if (!session.isOpen()) return;
@@ -229,5 +266,25 @@ public class WebSocketEchoHandler extends TextWebSocketHandler {
         if (value instanceof Boolean b) return b;
         if (value instanceof String s) return Boolean.parseBoolean(s);
         return false;
+    }
+
+    private void resetGameState(GameSessionState state) {
+        state.setPlayerX((GAME_WIDTH - PLAYER_WIDTH) / 2.0);
+        state.setLeftPressed(false);
+        state.setRightPressed(false);
+        state.setShootPressed(false);
+        state.getBullets().clear();
+        state.getAsteroids().clear();
+        state.setLastShotMillis(0L);
+        state.setLastAsteroidSpawnMillis(0L);
+        state.setLives(INITIAL_LIVES);
+        state.setScore(0);
+        state.setPaused(false);
+    }
+
+    private int scoreForAsteroidSize(int size) {
+        if (size <= 24) return 30;
+        if (size <= 32) return 20;
+        return 10;
     }
 }

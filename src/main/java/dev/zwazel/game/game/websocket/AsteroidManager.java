@@ -1,13 +1,10 @@
 package dev.zwazel.game.game.websocket;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
-/**
- * Verwaltet Asteroid-Logik: Random-Spawn, Bewegung nach unten.
- */
+
 public class AsteroidManager {
     private static final long ASTEROID_SPAWN_COOLDOWN_MILLIS = 900;
     private static final double ASTEROID_SPEED_PX_PER_SECOND = 170.0;
@@ -15,28 +12,33 @@ public class AsteroidManager {
     private static final int GAME_WIDTH = 720;
     private static final int GAME_HEIGHT = 520;
 
+    private int hpForSize(int asteroidSize) {
+        if (asteroidSize <= 24) return 1;
+        if (asteroidSize <= 32) return 2;
+        return 3;
+    }
+
     public void updateAsteroids(
             List<AsteroidState> asteroids,
             long lastSpawnMillis,
             long nowMillis,
             double deltaSeconds
     ) {
-        // Spawn neuer Asteroiden bei Cooldown
+
         if ((nowMillis - lastSpawnMillis) >= ASTEROID_SPAWN_COOLDOWN_MILLIS) {
             spawnAsteroid(asteroids);
         }
 
-        // Bewegung + Despawn außerhalb Spielfeld
-        List<AsteroidState> toRemove = new ArrayList<>();
-        for (AsteroidState asteroid : asteroids) {
+
+        for (int i = asteroids.size() - 1; i >= 0; i--) {
+            AsteroidState asteroid = asteroids.get(i);
             double nextY = asteroid.y() + ASTEROID_SPEED_PX_PER_SECOND * deltaSeconds;
             if (nextY > GAME_HEIGHT) {
-                toRemove.add(asteroid);
+                asteroids.remove(i);
             } else {
-                asteroid.setY(nextY);
+                asteroids.set(i, new AsteroidState(asteroid.id(), asteroid.x(), nextY, asteroid.size(), asteroid.hp()));
             }
         }
-        asteroids.removeAll(toRemove);
     }
 
     public long getLastSpawnMillis(long lastSpawnMillis, long nowMillis) {
@@ -49,7 +51,12 @@ public class AsteroidManager {
     private void spawnAsteroid(List<AsteroidState> asteroids) {
         int asteroidSize = ASTEROID_SIZES[ThreadLocalRandom.current().nextInt(ASTEROID_SIZES.length)];
         double asteroidX = ThreadLocalRandom.current().nextDouble(0, GAME_WIDTH - asteroidSize);
-        asteroids.add(new AsteroidState(UUID.randomUUID().toString(), asteroidX, -asteroidSize, asteroidSize));
+        asteroids.add(new AsteroidState(
+                UUID.randomUUID().toString(),
+                asteroidX,
+                -asteroidSize,
+                asteroidSize,
+                hpForSize(asteroidSize)
+        ));
     }
 }
-

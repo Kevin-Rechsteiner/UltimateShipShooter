@@ -2,10 +2,6 @@ package dev.zwazel.game.game.websocket;
 
 import java.util.ArrayList;
 import java.util.List;
-
-/**
- * Speichert den kompletten Game-State für eine WebSocket-Session.
- */
 public class GameSessionState {
     private double playerX;
     private boolean leftPressed;
@@ -17,6 +13,7 @@ public class GameSessionState {
     private long lastAsteroidSpawnMillis;
     private int lives;
     private int score;
+    private int highScore;
     private boolean paused;
 
     public GameSessionState(
@@ -34,10 +31,10 @@ public class GameSessionState {
         this.lastAsteroidSpawnMillis = 0L;
         this.lives = initialLives;
         this.score = initialScore;
+        this.highScore = initialScore;
         this.paused = false;
     }
 
-    // Getter und Setter
     public double getPlayerX() { return playerX; }
     public void setPlayerX(double playerX) { this.playerX = playerX; }
 
@@ -68,8 +65,12 @@ public class GameSessionState {
     public int getScore() { return score; }
     public void setScore(int score) { this.score = score; }
 
+    public int getHighScore() { return highScore; }
+    public void setHighScore(int highScore) { this.highScore = highScore; }
+
     public boolean isPaused() { return paused; }
     public void setPaused(boolean paused) { this.paused = paused; }
+
 
     public boolean isGameOver() { return lives <= 0; }
 }

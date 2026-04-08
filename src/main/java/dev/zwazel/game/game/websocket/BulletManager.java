@@ -5,9 +5,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
-/**
- * Verwaltet Bullet-Logik: Spawn mit Cooldown, Bewegung, Despawn.
- */
 public class BulletManager {
     private static final int BULLET_SIZE = 9;
     private static final double BULLET_SPEED_PX_PER_SECOND = 520.0;

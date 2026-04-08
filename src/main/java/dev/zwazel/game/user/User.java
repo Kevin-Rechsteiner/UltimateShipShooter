@@ -31,6 +31,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
+@SuppressWarnings("JpaDataSourceORMInspection")
 @Entity
 @Table(name = "users")
 public class User implements UserDetails {
@@ -50,6 +51,11 @@ public class User implements UserDetails {
     /** User's role which determines their authorities/permissions */
     @Enumerated(EnumType.STRING)
     private Role role;
+
+    /** Persisted personal best score for the asteroid game */
+    @Column(nullable = false)
+    @Builder.Default
+    private int highScore = 0;
 
     /**
      * Maps the user's role to a collection of granted authorities.

@@ -4,11 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-/**
- * Erstellt das State-Update für WebSocket-Clients.
- * Konvertiert interne States zu JSON-Payload.
- */
 public class GameStateUpdater {
     private static final int BULLET_SIZE = 9;
     private static final int GAME_WIDTH = 720;
@@ -24,12 +19,10 @@ public class GameStateUpdater {
     ) {
         Map<String, Object> payload = new HashMap<>();
 
-        // Player
         payload.put("player", Map.of(
                 "x", (int) Math.round(sessionState.getPlayerX())
         ));
 
-        // Bullets
         List<Map<String, Object>> bulletsPayload = new ArrayList<>(bullets.size());
         for (BulletState bullet : bullets) {
             bulletsPayload.add(Map.of(
@@ -41,20 +34,21 @@ public class GameStateUpdater {
         }
         payload.put("bullets", bulletsPayload);
 
-        // Asteroids
         List<Map<String, Object>> asteroidsPayload = new ArrayList<>(asteroids.size());
         for (AsteroidState asteroid : asteroids) {
             asteroidsPayload.add(Map.of(
                     "id", asteroid.id(),
                     "x", (int) Math.round(asteroid.x()),
                     "y", (int) Math.round(asteroid.y()),
-                    "size", asteroid.size()
+                    "size", asteroid.size(),
+                    "hp", asteroid.hp()
             ));
         }
         payload.put("asteroids", asteroidsPayload);
 
-        // Game State (Score, Lives, etc.)
         payload.put("score", sessionState.getScore());
+        payload.put("highScore", sessionState.getHighScore());
+        payload.put("personalBest", sessionState.getHighScore());
         payload.put("lives", sessionState.getLives());
         payload.put("paused", sessionState.isPaused());
         payload.put("gameOver", sessionState.isGameOver());
@@ -79,6 +73,8 @@ public class GameStateUpdater {
         payload.put("asteroids", new Object[]{});
         payload.put("bullets", new Object[]{});
         payload.put("score", 0);
+        payload.put("highScore", 0);
+        payload.put("personalBest", 0);
         payload.put("lives", 3);
         payload.put("paused", false);
         payload.put("gameOver", false);
