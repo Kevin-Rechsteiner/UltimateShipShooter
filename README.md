@@ -1,14 +1,14 @@
 # UltimateShipShooter (Spring Boot)
 
-Backend fuer ein kleines Arcade-Spiel mit WebSocket-Game-Loop, JWT-Authentifizierung und Highscore-API.
+**Schulprojekt** – Backend für ein kleines Arcade-Spiel mit WebSocket-Game-Loop, JWT-Authentifizierung und Highscore-API.
 
 ## Features
 
 - Echtzeit-Spielzustand per WebSocket (`/ws/game`)
-- JWT-basierte Anmeldung mit Cookie-Unterstuetzung
-- Rollen-/Rechte-geschuetzte REST-Endpunkte
+- JWT-basierte Anmeldung mit Cookie-Unterstützung
+- Rollen-/Rechte-geschützte REST-Endpunkte
 - Highscore-Endpoints (`/api/v1/highscore/...`)
-- Persistenz ueber Spring Data JPA + MySQL
+- Persistenz über Spring Data JPA + MySQL
 
 ## Tech-Stack
 
@@ -37,7 +37,7 @@ Wichtige Werte:
 - `spring.jpa.hibernate.ddl-auto=create-drop`
 - `jwt.expiration=900000` (15 Minuten)
 
-> Hinweis: Mit `create-drop` wird das Schema beim Start erzeugt und beim Stoppen geloescht.
+> Hinweis: Mit `create-drop` wird das Schema beim Start erzeugt und beim Stoppen gelöscht.
 
 ## Schnellstart (Windows PowerShell)
 
@@ -55,7 +55,7 @@ Beim Start werden Demo-User angelegt (`GameApplication`):
 - `student@example.com` / `StrongP@ssw0rd!`
 - `admin@example.com` / `StrongP@ssw0rd!`
 
-## Tests ausfuehren
+## Tests ausführen
 
 ```powershell
 .\mvnw.cmd test
@@ -102,6 +102,5 @@ Highscore (`/api/v1/highscore`):
 ## Troubleshooting
 
 - **App startet nicht wegen DB**: MySQL starten oder `spring.datasource.*` anpassen.
-- **401 bei geschuetzten Endpoints**: Erst ueber `/api/v1/auth/authenticate` einloggen.
+- **401 bei geschützten Endpoints**: Erst über `/api/v1/auth/authenticate` einloggen.
 - **WebSocket verbindet nicht**: Sicherstellen, dass auf `/ws/game` verbunden wird.
-
