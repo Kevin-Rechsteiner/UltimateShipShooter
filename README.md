@@ -1,5 +1,7 @@
 # UltimateShipShooter (Spring Boot)
 
+Link Frontend: https://github.com/Kevin-Rechsteiner/frontend_for_asteroid
+
 **Schulprojekt** – Backend für ein kleines Arcade-Spiel mit WebSocket-Game-Loop, JWT-Authentifizierung und Highscore-API.
 
 ## Features
